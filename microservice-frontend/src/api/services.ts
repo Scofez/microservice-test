@@ -21,8 +21,12 @@ export interface ServiceResponse {
 
 // A 404 is a real answer the page must display, so every HTTP status resolves.
 // Only a missing JSON body rejects: our services always answer JSON, the Vite proxy does not.
-export async function callService(service: ServiceName, path: string): Promise<ServiceResponse> {
-  const response = await fetch(`/api/${service}${path}`)
+export async function callService(
+  service: ServiceName,
+  path: string,
+  method: 'GET' | 'POST' = 'GET',
+): Promise<ServiceResponse> {
+  const response = await fetch(`/api/${service}${path}`, { method })
   const text = await response.text()
 
   try {

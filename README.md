@@ -16,7 +16,8 @@ Each service is independent: its own `package.json`, `tsconfig.json`, and in-mem
 ## Frontend
 
 `microservice-frontend/` is a Vite + React + TypeScript app with four pages:
-service health (polled every 3 s), and one page per service that shows its raw HTTP response.
+service health (polled every 3 s, with a **Stop** button per service), and one page per service that shows its raw HTTP response.
+Error bodies show as an alert, including the failed dependency call. See [its README](microservice-frontend/README.md).
 
 The Vite dev server proxies `/api/<service>/*` to each service, so the browser uses one origin and CORS does not apply.
 
@@ -26,15 +27,22 @@ Requires Node 23.6+ (the services run `.ts` files directly, with no build step).
 
 ```sh
 # in three terminals
-cd services/order-service        && npm install && npm start
-cd services/inventory-service    && npm install && npm start
-cd services/notification-service && npm install && npm start
+cd services/order-service        && npm install && npm run dev
+cd services/inventory-service    && npm install && npm run dev
+cd services/notification-service && npm install && npm run dev
 
 # in a fourth terminal
 cd microservice-frontend && npm install && npm run dev
 ```
 
 Then open http://localhost:5173.
+
+### Dev tools
+
+Start a service with `npm run dev` instead of `npm start` to set `ENABLE_DEV_TOOLS=true`. It turns on two things that must never reach production:
+
+- `POST /admin/shutdown`, used by the **Stop** buttons on the health page. Start the service again with `npm run dev`.
+- Failure details in 503 bodies: the dependency URL and a cause such as `ECONNREFUSED` or `TIMEOUT`.
 
 ## Roadmap
 

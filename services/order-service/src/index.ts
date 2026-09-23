@@ -6,6 +6,7 @@ import { findOrder } from './orders.ts';
 
 const SERVICE_NAME = 'order-service';
 const port = Number(process.env.PORT ?? 3001);
+const isDevToolsEnabled = process.env.ENABLE_DEV_TOOLS === 'true';
 
 const app = express();
 
@@ -46,12 +47,29 @@ app.get('/orders/:id/availability', async (req, res) => {
 
     case 'unavailable':
       // 503, not 500: order-service works, but it cannot answer without inventory-service.
-      console.warn(`availability of ${order.id}: ${stockLookup.reason}`);
-      res.status(503).json({ error: stockLookup.reason });
+      console.warn(`availability of ${order.id}: ${stockLookup.reason}`, stockLookup.failure);
+      // Internal URLs help while learning but leak topology in production, so they are opt-in.
+      res.status(503).json({
+        error: stockLookup.reason,
+        ...(isDevToolsEnabled && { dependency: stockLookup.failure }),
+      });
       return;
   }
 });
 
-app.listen(port, () => {
-  console.log(`${SERVICE_NAME} listens on http://localhost:${port}`);
+// Anyone who can reach the port could stop the service, so this route exists only on explicit opt-in.
+if (isDevToolsEnabled) {
+  app.post('/admin/shutdown', (_req, res) => {
+    console.log(`${SERVICE_NAME} shuts down on request`);
+    res.on('finish', () => {
+      server.close(() => process.exit(0));
+      server.closeAllConnections();
+    });
+    res.status(202).json({ service: SERVICE_NAME, status: 'shutting down' });
+  });
+}
+
+const server = app.listen(port, () => {
+  const mode = isDevToolsEnabled ? ' (dev tools on)' : '';
+  console.log(`${SERVICE_NAME} listens on http://localhost:${port}${mode}`);
 });

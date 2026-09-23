@@ -2,6 +2,7 @@ import { useQueries } from '@tanstack/react-query'
 import type { JSX } from 'react'
 
 import { callService, services, type ServiceResponse } from '../api/services.ts'
+import StopServiceButton from '../components/StopServiceButton.tsx'
 
 const POLL_INTERVAL_MS = 3000
 
@@ -46,6 +47,7 @@ export default function HealthPage(): JSX.Element {
               {checkedAt > 0 && (
                 <p className="muted">Last check: {new Date(checkedAt).toLocaleTimeString()}</p>
               )}
+              <StopServiceButton service={service} isUp={isUp} />
             </article>
           )
         })}

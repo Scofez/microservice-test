@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.ts",
+    "dev": "ENABLE_DEV_TOOLS=true node src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

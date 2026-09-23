@@ -7,10 +7,16 @@ export interface StockItem {
   available: number;
 }
 
+export interface DependencyFailure {
+  service: 'inventory-service';
+  url: string;
+  cause: string;
+}
+
 export type StockLookup =
   | { kind: 'found'; stockItem: StockItem }
   | { kind: 'unknown-sku' }
-  | { kind: 'unavailable'; reason: string };
+  | { kind: 'unavailable'; reason: string; failure: DependencyFailure };
 
 function isStockItem(value: unknown): value is StockItem {
   return (
@@ -23,17 +29,33 @@ function isStockItem(value: unknown): value is StockItem {
   );
 }
 
+// fetch hides the network reason one level down: "fetch failed" wraps { code: "ECONNREFUSED" }.
+function causeOf(error: unknown): string {
+  if (error instanceof DOMException && error.name === 'TimeoutError') {
+    return 'TIMEOUT';
+  }
+  if (error instanceof Error && error.cause instanceof Error && 'code' in error.cause) {
+    return String(error.cause.code);
+  }
+  return 'NETWORK_ERROR';
+}
+
 export async function fetchStock(sku: string): Promise<StockLookup> {
   const url = `${INVENTORY_URL}/stock/${encodeURIComponent(sku)}`;
+  const unavailable = (reason: string, cause: string): StockLookup => ({
+    kind: 'unavailable',
+    reason: `inventory-service ${reason}`,
+    failure: { service: 'inventory-service', url, cause },
+  });
 
   let response: Response;
   try {
     // Without a timeout, a slow inventory-service makes every order request slow too.
     response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (error) {
-    const isTimeout = error instanceof DOMException && error.name === 'TimeoutError';
-    const reason = isTimeout ? `sent no answer within ${TIMEOUT_MS} ms` : 'is unreachable';
-    return { kind: 'unavailable', reason: `inventory-service ${reason}` };
+    const cause = causeOf(error);
+    const reason = cause === 'TIMEOUT' ? `sent no answer within ${TIMEOUT_MS} ms` : 'is unreachable';
+    return unavailable(reason, cause);
   }
 
   if (response.status === 404) {
@@ -41,13 +63,13 @@ export async function fetchStock(sku: string): Promise<StockLookup> {
   }
 
   if (!response.ok) {
-    return { kind: 'unavailable', reason: `inventory-service answered HTTP ${response.status}` };
+    return unavailable(`answered HTTP ${response.status}`, `HTTP_${response.status}`);
   }
 
   const body: unknown = await response.json().catch(() => console.warn(`inventory-service sent a non-JSON body for ${sku}`));
 
   if (!isStockItem(body)) {
-    return { kind: 'unavailable', reason: 'inventory-service sent an unexpected body' };
+    return unavailable('sent an unexpected body', 'INVALID_BODY');
   }
 
   return { kind: 'found', stockItem: body };

@@ -4,6 +4,7 @@ import { findStock } from './stock.ts';
 
 const SERVICE_NAME = 'inventory-service';
 const port = Number(process.env.PORT ?? 3002);
+const isDevToolsEnabled = process.env.ENABLE_DEV_TOOLS === 'true';
 
 const app = express();
 
@@ -23,6 +24,19 @@ app.get('/stock/:sku', (req, res) => {
   res.json(stockItem);
 });
 
-app.listen(port, () => {
-  console.log(`${SERVICE_NAME} listens on http://localhost:${port}`);
+// Anyone who can reach the port could stop the service, so this route exists only on explicit opt-in.
+if (isDevToolsEnabled) {
+  app.post('/admin/shutdown', (_req, res) => {
+    console.log(`${SERVICE_NAME} shuts down on request`);
+    res.on('finish', () => {
+      server.close(() => process.exit(0));
+      server.closeAllConnections();
+    });
+    res.status(202).json({ service: SERVICE_NAME, status: 'shutting down' });
+  });
+}
+
+const server = app.listen(port, () => {
+  const mode = isDevToolsEnabled ? ' (dev tools on)' : '';
+  console.log(`${SERVICE_NAME} listens on http://localhost:${port}${mode}`);
 });

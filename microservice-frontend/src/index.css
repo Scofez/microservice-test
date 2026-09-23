@@ -104,3 +104,14 @@ button[type='submit'] { background: var(--accent); border-color: var(--accent); 
 .health-card.checking .health-state { color: var(--muted); }
 
 .section-title { margin: 40px 0 4px; font-size: 1.15rem; }
+
+.stop { margin-top: 12px; }
+.stop .muted { margin: 6px 0 0; }
+button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+button.danger:hover:not(:disabled) { background: var(--bad-bg); border-color: var(--bad); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.alert { margin-top: 12px; padding: 10px 14px; border-radius: 8px; border-left: 4px solid; }
+.alert p { margin: 4px 0 0; font-size: 0.875rem; overflow-wrap: anywhere; }
+.alert.warn { color: var(--warn); background: var(--warn-bg); }
+.alert.bad { color: var(--bad); background: var(--bad-bg); }
