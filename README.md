@@ -6,12 +6,12 @@ A learning project: three small Node.js microservices and a React frontend that 
 
 | Service                | Port | Routes                              | Owns            |
 | ---------------------- | ---- | ----------------------------------- | --------------- |
-| `order-service`        | 3001 | `GET /health`, `GET /orders/:id`    | orders          |
+| `order-service`        | 3001 | `GET /health`, `GET /orders/:id`, `GET /orders/:id/availability` | orders |
 | `inventory-service`    | 3002 | `GET /health`, `GET /stock/:sku`    | stock per SKU   |
 | `notification-service` | 3003 | `GET /health`, `GET /notifications` | sent messages   |
 
 Each service is independent: its own `package.json`, `tsconfig.json`, and in-memory data.
-The services do not call each other yet.
+`GET /orders/:id/availability` is the first service-to-service call: order-service asks inventory-service for the stock over HTTP (2 s timeout, set its address with `INVENTORY_URL`). If inventory-service is down, slow, or sends a bad body, order-service answers 503.
 
 ## Frontend
 
@@ -40,5 +40,5 @@ Then open http://localhost:5173.
 
 1. ✅ Three services with one `GET` route each
 2. ✅ Frontend to inspect them
-3. `order-service` calls `inventory-service` over HTTP
+3. ✅ `order-service` calls `inventory-service` over HTTP
 4. `order-service` publishes `order.created`, `notification-service` consumes it through RabbitMQ
